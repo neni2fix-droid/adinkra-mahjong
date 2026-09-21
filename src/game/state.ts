@@ -16,7 +16,7 @@
  * Pure module: no DOM, no React, no `Date.now()`.
  */
 import { countBySymbol, maxLayerOf, remainingCount } from './board';
-import { shuffleRemaining } from './deck';
+import { generateSolvable, shuffleRemaining } from './deck';
 import { findHint, hasMoves, select } from './rules';
 import { applyMatchScoring, applyPenalty, breakFlow, starsFor, timeBonus } from './scoring';
 import {
@@ -38,7 +38,6 @@ import type {
   TileKey,
   UndoRecord,
 } from './types';
-import { generateSolvable } from './deck';
 
 /* ── construction ───────────────────────────────────────────────────── */
 
@@ -349,8 +348,7 @@ export function applyUndo(state: GameState): GameState {
  * Charm, and the chain is the player's own business. It also does not push onto
  * the undo stack, because it is not a move.
  */
-export function applyHint(state: GameState, now: number): GameState {
-  void now;
+export function applyHint(state: GameState): GameState {
   if (!canHint(state)) return withEvent(state, { kind: 'ignored' });
 
   const pair = findHint(state.tiles, maxLayerOf(state.tiles));
