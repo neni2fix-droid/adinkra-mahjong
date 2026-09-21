@@ -1,0 +1,73 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant App as App.tsx
+  participant PG as usePersistentGame
+  participant S as storage.ts
+  participant St as state.ts
+  participant D as deck.ts
+  participant L as data/layouts.ts
+
+  Note over App,D: BOOT — restore or new game
+  App->>PG: useEffect(load)
+  PG->>S: createStorage(window.localStorage)
+  PG->>S: readGame() // adinkra-mahjong:v1:game
+  alt valid SavedGame
+    S-->>PG: SavedGame v1
+    PG->>St: restore(savedGame.state)
+    St-->>App: GameState
+  else none/invalid/version mismatch
+    PG->>St: createGame(layoutId, seed, SYMBOLS)
+    St->>L: layoutById(layoutId)
+    L-->>St: LayoutDefinition (136)
+    St->>D: generateSolvable(layout, SYMBOLS, createRng(seed))
+    D-->>St: { tiles(136), solution }
+    St-->>App: fresh GameState
+  end
+
+  Note over U,D: TILE CLICK -> select / match / remove -> score -> win check
+  U->>App: click / Enter on tile
+  App->>St: applySelect(state, key)
+  St->>St: rules.select(state, key)
+  alt blocked
+    St-->>App: status error flag
+    App->>App: announce "That tile is blocked"
+  else first pick
+    St-->>App: selected
+  else match
+    St->>St: scoring.matchPoints(combo)
+    St->>St: push UndoRecord(snapshot score/combo/moves/elapsed)
+    St->>St: remove pair; remaining -= 2; moves += 1
+    alt remaining === 0
+      St->>St: score += timeBonus; status = 'won'
+      App->>App: announce "Board cleared!" (assertive)
+    else no moves
+      St->>St: status = 'no-moves'
+    end
+  end
+  St-->>App: new GameState
+
+  Note over U,D: HINT
+  U->>App: Hint
+  App->>St: applyHint(state)
+  St->>St: rules.findMatch(tiles)
+  St->>St: score -= HINT_PENALTY; hintKeys = pair
+  St-->>App: new GameState
+
+  Note over U,D: SHUFFLE
+  U->>App: Shuffle
+  App->>St: applyShuffle(state, seed)
+  St->>D: shuffleRemaining(layout, tiles, rng, 60)
+  D-->>St: { solution, moved, failed }
+  St->>St: score -= SHUFFLE_PENALTY; status = 'playing'
+  St-->>App: new GameState
+
+  Note over U,D: UNDO
+  U->>App: Undo
+  App->>St: applyUndo(state)
+  St->>St: rec = history.pop(); restore tiles; restore snapshot
+  St-->>App: new GameState
+
+  Note over App,S: PERSIST (debounced autosave)
+  App->>S: saveGame({version:1, savedAt, state})
+  S->>S: JSON.stringify + guard -> setItem(adinkra-mahjong:v1:game)

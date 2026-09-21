@@ -1,0 +1,179 @@
+classDiagram
+  class Symbol {
+    +number id
+    +string slug
+    +string name
+    +SymbolFamily family
+    +string meaning
+    +string svgAssetPath
+    +string accessibleLabel
+  }
+
+  class BoardPosition {
+    +number x
+    +number y
+    +number layer
+  }
+
+  class Tile {
+    +string key
+    +number x
+    +number y
+    +number layer
+    +number symbolId
+    +boolean removed
+  }
+
+  class LayoutDefinition {
+    +LayoutId id
+    +string name
+    +number cols
+    +number rows
+    +number layers
+    +number maxLayer
+    +BoardPosition[] positions
+    +number tileCount
+  }
+
+  class Move {
+    +string[] keys
+    +number symbolId
+    +number points
+    +number comboAfter
+    +number at
+  }
+
+  class ScoreState {
+    +number score
+    +number combo
+    +number lastMatchAt
+    +number moves
+    +number hintsUsed
+    +number shufflesUsed
+  }
+
+  class UndoRecord {
+    +string[] keys
+    +number symbolId
+    +snapshot()
+  }
+
+  class GameState {
+    +GameStatus status
+    +LayoutId layoutId
+    +Record tiles
+    +string selected
+    +number remaining
+    +ScoreState score
+    +number elapsedSeconds
+    +UndoRecord[] history
+    +string[] hintKeys
+    +number seed
+  }
+
+  class Settings {
+    +boolean sound
+    +ThemeName theme
+    +LayoutId layoutId
+    +boolean reduceMotion
+  }
+
+  class SavedGame {
+    +number version
+    +number savedAt
+    +GameState state
+  }
+
+  class StorageLike {
+    <<interface>>
+    +getItem(key) string
+    +setItem(key, value) void
+    +removeItem(key) void
+  }
+
+  class SoundEngine {
+    <<interface>>
+    +init() void
+    +setMuted(muted) void
+    +isMuted() boolean
+    +play(name, combo) void
+  }
+
+  class Deck {
+    <<module>>
+    +createRng(seed) fn
+    +shuffle(arr, rng) arr
+    +generateSolvable(layout, symbols, rng) Deal
+    +shuffleRemaining(layout, tiles, rng, n) ShuffleResult
+  }
+
+  class Board {
+    <<module>>
+    +key(x,y,layer) string
+    +parseKey(k) BoardPosition
+    +occupiedFrom(tiles) occ
+    +isFree(tiles, x, y, layer, max) boolean
+    +freeTiles(tiles, max) Tile[]
+    +remainingCount(tiles) number
+  }
+
+  class Rules {
+    <<module>>
+    +findMatch(tiles, max) pair
+    +hasMoves(tiles, max) boolean
+    +select(state, key) SelectResult
+  }
+
+  class Scoring {
+    <<module>>
+    +comboMultiplier(combo) number
+    +matchPoints(combo) number
+    +timeBonus(elapsed) number
+    +applyHintPenalty(score) number
+    +applyShufflePenalty(score) number
+  }
+
+  class StateEngine {
+    <<module>>
+    +createGame(layoutId, seed, symbols) GameState
+    +applySelect(state, key) GameState
+    +applyMatch(state, a, b) GameState
+    +applyUndo(state) GameState
+    +applyHint(state) GameState
+    +applyShuffle(state, seed) GameState
+    +evaluateStatus(state) GameStatus
+  }
+
+  class StorageModule {
+    <<module>>
+    +createStorage(backend) Store
+    +migrate(raw, fromVersion) any
+  }
+
+  class AudioModule {
+    <<module>>
+    +createSoundEngine() SoundEngine
+  }
+
+  Symbol "1" --> "*" Tile : symbolId
+  LayoutDefinition "1" --> "*" BoardPosition : positions
+  BoardPosition <|-- Tile
+  Tile "*" --> "1" GameState : tiles
+  GameState "1" --> "1" ScoreState : score
+  GameState "1" --> "*" UndoRecord : history
+  GameState "1" --> "1" LayoutDefinition : layoutId
+  UndoRecord "1" --> "*" Tile : keys
+  SavedGame "1" --> "1" GameState : state
+  Settings "1" --> "1" LayoutId : layoutId
+  StorageModule ..> StorageLike : uses
+  StorageModule ..> SavedGame : persists
+  StorageModule ..> Settings : persists
+  AudioModule ..> SoundEngine : creates
+  Deck ..> LayoutDefinition : reads
+  Deck ..> Tile : writes symbolId
+  Board ..> Tile : reads
+  Rules ..> Board : uses
+  StateEngine ..> Rules : uses
+  StateEngine ..> Scoring : uses
+  StateEngine ..> Deck : uses
+  StateEngine ..> GameState : produces
