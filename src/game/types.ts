@@ -22,6 +22,9 @@ export type GameStatus = 'ready' | 'playing' | 'paused' | 'won' | 'no-moves';
 /** Mastery rating for a cleared layout (design doc §4.4). */
 export type StarRating = 0 | 1 | 2 | 3;
 
+/** Layout difficulty, 1 = gentle … 4 = mastery (design doc §6). */
+export type Difficulty = 1 | 2 | 3 | 4;
+
 /** Which top-level screen the app shell is showing. */
 export type ScreenName = 'landing' | 'game' | 'help' | 'settings';
 

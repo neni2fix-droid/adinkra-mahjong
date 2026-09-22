@@ -13,7 +13,7 @@
  * Pure module: no DOM, no React, no `window`.
  */
 import { TILE_COUNT } from '../game/types';
-import type { BoardPosition, LayoutDefinition, LayoutId } from '../game/types';
+import type { BoardPosition, Difficulty, LayoutDefinition, LayoutId } from '../game/types';
 
 /** One layer of a layout: either a solid rectangle block or a row-pattern. */
 type LayerDef =
@@ -93,6 +93,8 @@ export function assertTileCount(layout: LayoutDefinition, expected: number): voi
 function makeLayout(
   id: LayoutId,
   name: string,
+  blurb: string,
+  difficulty: Difficulty,
   cols: number,
   rows: number,
   layerDefs: readonly LayerDef[],
@@ -109,6 +111,8 @@ function makeLayout(
   const layout: LayoutDefinition = {
     id,
     name,
+    blurb,
+    difficulty,
     cols,
     rows,
     layers: layerDefs.length,
@@ -124,7 +128,7 @@ function makeLayout(
 /* ---------------------------------------------------------------------- *
  * Layout 1 — Classic Turtle · grid 12 × 8 · 92 + 28 + 16 = 136
  * ---------------------------------------------------------------------- */
-const CLASSIC_TURTLE = makeLayout('classic-turtle', 'Classic Turtle', 12, 8, [
+const CLASSIC_TURTLE = makeLayout('classic-turtle', 'Classic Turtle', 'Wide base, generous margins — the gentlest board.', 1, 12, 8, [
   {
     kind: 'rows',
     rows: [
@@ -156,7 +160,7 @@ const CLASSIC_TURTLE = makeLayout('classic-turtle', 'Classic Turtle', 12, 8, [
 /* ---------------------------------------------------------------------- *
  * Layout 2 — Diamond · grid 12 × 12 · 84 + 36 + 16 = 136
  * ---------------------------------------------------------------------- */
-const DIAMOND = makeLayout('diamond', 'Diamond', 12, 12, [
+const DIAMOND = makeLayout('diamond', 'Diamond', 'Tapering rim; freedom tightens at the four points.', 2, 12, 12, [
   {
     kind: 'rows',
     rows: [
@@ -181,7 +185,7 @@ const DIAMOND = makeLayout('diamond', 'Diamond', 12, 12, [
 /* ---------------------------------------------------------------------- *
  * Layout 3 — Ghana Star · grid 12 × 12 · 72 + 48 + 16 = 136
  * ---------------------------------------------------------------------- */
-const GHANA_STAR = makeLayout('ghana-star', 'Ghana Star', 12, 12, [
+const GHANA_STAR = makeLayout('ghana-star', 'Ghana Star', 'Pinched star points create tight corridors.', 4, 12, 12, [
   {
     kind: 'rows',
     rows: [
@@ -220,7 +224,7 @@ const GHANA_STAR = makeLayout('ghana-star', 'Ghana Star', 12, 12, [
 /* ---------------------------------------------------------------------- *
  * Layout 4 — Compact Mobile · grid 8 × 12 (portrait) · 88 + 36 + 12 = 136
  * ---------------------------------------------------------------------- */
-const COMPACT_MOBILE = makeLayout('compact-mobile', 'Compact Mobile', 8, 12, [
+const COMPACT_MOBILE = makeLayout('compact-mobile', 'Compact Mobile', 'Narrow 8-wide body tuned for one-hand play.', 3, 8, 12, [
   { kind: 'rect', x: 0, y: 0, w: 8, h: 11 }, // = 88
   { kind: 'rect', x: 1, y: 2, w: 6, h: 6 }, // = 36
   { kind: 'rect', x: 2, y: 4, w: 4, h: 3 }, // = 12

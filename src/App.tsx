@@ -1,39 +1,177 @@
-/**
- * App — application shell.
- *
- * T01 scope: a themed, empty shell that proves the toolchain, Tailwind v4
- * tokens and StrictMode mounting all work end-to-end. The screen state machine
- * (`landing | game | paused | help | settings | won | no-moves`), the hooks and
- * the board UI land in T04/T05.
- */
-export default function App() {
-  return (
-    <div className="app-shell flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-      <span
-        className="inline-flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-gold bg-parchment-2 text-ochre shadow-lg"
-        aria-hidden="true"
-      >
-        <svg viewBox="0 0 100 100" className="h-14 w-14" fill="none" stroke="currentColor"
-          strokeWidth={7} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="50" cy="50" r="40" />
-          <circle cx="50" cy="50" r="26" />
-          <circle cx="50" cy="50" r="12" />
-        </svg>
-      </span>
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { LAYOUT_BY_ID } from './data/layouts';
+import { loadSettings } from './game/storage';
+import type { GameEvent, LayoutId } from './game/types';
+import Footer from './components/Footer';
+import GameBoard from './components/GameBoard';
+import GameStats from './components/GameStats';
+import Landing from './components/Landing';
+import LiveRegion from './components/LiveRegion';
+import NoMovesModal from './components/NoMovesModal';
+import PauseOverlay from './components/PauseOverlay';
+import Toolbar from './components/Toolbar';
+import WinModal from './components/WinModal';
+import { useAnnouncer } from './hooks/useAnnouncer';
+import { useGame } from './hooks/useGame';
+import { useSound } from './hooks/useSound';
+import { useTheme } from './hooks/useTheme';
+import { useTimer } from './hooks/useTimer';
 
-      <div>
-        <h1 className="font-display text-4xl text-ink">
-          <span className="text-accent-red">Adinkra</span> Mahjong
-        </h1>
-        <p className="mt-2 max-w-md text-ink-soft">
-          Ghanaian-inspired Mahjong Solitaire. The application shell is ready — game
-          screens arrive in the next tasks.
-        </p>
+type Screen = 'landing' | 'game';
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>('landing');
+  const [layoutId] = useState<LayoutId>(() => {
+    if (typeof window === 'undefined') return 'classic-turtle';
+    return loadSettings(window.localStorage).layoutId;
+  });
+
+  const { state, actions } = useGame(layoutId);
+  const { theme, toggle: toggleTheme } = useTheme();
+  const { muted: soundMuted, init: initSound, play, toggle: toggleSound } = useSound();
+  const { polite, assertive, announce } = useAnnouncer();
+  const { seconds, reset: resetTimer } = useTimer(state.status === 'playing');
+
+  const prevEventRef = useRef<GameEvent | null>(null);
+  const initializedRef = useRef(false);
+
+  const handleInteraction = useCallback(() => {
+    if (!initializedRef.current) {
+      initSound();
+      initializedRef.current = true;
+    }
+  }, [initSound]);
+
+  useEffect(() => {
+    const ev = state.lastEvent;
+    if (!ev || ev === prevEventRef.current) return;
+    prevEventRef.current = ev;
+
+    switch (ev.kind) {
+      case 'matched':
+        announce(`Matched. Combo ${ev.combo}.`);
+        play('match', ev.combo);
+        break;
+      case 'blocked':
+        announce('That tile is blocked.', 'assertive');
+        play('error');
+        break;
+      case 'invalid':
+        announce('No match. Flow broken.', 'assertive');
+        play('error');
+        break;
+      case 'hint':
+        announce('Hint shown.');
+        play('hint');
+        break;
+      case 'shuffle':
+        announce(ev.failed ? 'Shuffle failed.' : 'Board shuffled.');
+        play('shuffle');
+        break;
+      case 'undo':
+        announce('Undo.');
+        break;
+      case 'won':
+        announce(`You win! Score ${ev.score}. ${ev.stars} stars.`, 'assertive');
+        play('win');
+        break;
+      case 'no-moves':
+        announce('No moves left.', 'assertive');
+        play('lose');
+        break;
+      case 'select':
+        play('select');
+        break;
+    }
+  }, [state.lastEvent, state.eventSeq, announce, play]);
+
+  useEffect(() => {
+    if (state.status === 'playing') {
+      actions.tick(1);
+    }
+  }, [seconds, state.status, actions]);
+
+  const startGame = useCallback(() => {
+    handleInteraction();
+    setScreen('game');
+    actions.newGame(layoutId);
+    resetTimer();
+  }, [handleInteraction, layoutId, actions, resetTimer]);
+
+  const handleNewGame = useCallback(() => {
+    actions.newGame(layoutId);
+    resetTimer();
+  }, [actions, layoutId, resetTimer]);
+
+  const handleSelect = useCallback(
+    (key: string) => {
+      handleInteraction();
+      actions.select(key);
+    },
+    [actions, handleInteraction],
+  );
+
+  const layout = LAYOUT_BY_ID[layoutId] ?? LAYOUT_BY_ID['classic-turtle'];
+
+  if (screen === 'landing') {
+    return (
+      <>
+        <Landing onPlay={startGame} />
+        <LiveRegion polite={polite} assertive={assertive} />
+      </>
+    );
+  }
+
+  return (
+    <div className="app-shell flex min-h-dvh flex-col">
+      <LiveRegion polite={polite} assertive={assertive} />
+
+      <div className="sticky top-0 z-40 border-b border-ink-faint/10 bg-parchment/80 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-1 py-2">
+          <h1 className="font-display text-xl font-bold text-ink">
+            <span className="text-accent-red">Adinkra</span> Mahjong
+          </h1>
+          <GameStats state={state} />
+          <Toolbar
+            state={state}
+            onNewGame={handleNewGame}
+            onUndo={actions.undo}
+            onHint={actions.hint}
+            onShuffle={actions.shuffle}
+            onPause={actions.pause}
+            soundMuted={soundMuted}
+            onToggleSound={toggleSound}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       </div>
 
-      <p className="text-xs text-ink-faint">
-        Inspired by Ghana&rsquo;s Adinkra visual tradition.
-      </p>
+      <main className="flex-1 overflow-auto py-4">
+        <GameBoard state={state} layout={layout} onSelect={handleSelect} />
+      </main>
+
+      <Footer />
+
+      <PauseOverlay
+        open={state.status === 'paused'}
+        onResume={actions.resume}
+        onNewGame={handleNewGame}
+      />
+
+      <WinModal
+        open={state.status === 'won'}
+        score={state.score.score}
+        timeSeconds={state.elapsedSeconds}
+        stars={0}
+        onPlayAgain={handleNewGame}
+      />
+
+      <NoMovesModal
+        open={state.status === 'no-moves'}
+        onRescue={actions.rescue}
+        onNewGame={handleNewGame}
+      />
     </div>
   );
 }
