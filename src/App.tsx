@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LAYOUT_BY_ID } from './data/layouts';
-import { loadSettings } from './game/storage';
+import { loadSettings, saveSettings } from './game/storage';
 import type { GameEvent, LayoutId } from './game/types';
 import Footer from './components/Footer';
 import GameBoard from './components/GameBoard';
 import GameStats from './components/GameStats';
+import Help from './components/Help';
 import Landing from './components/Landing';
 import LiveRegion from './components/LiveRegion';
 import NoMovesModal from './components/NoMovesModal';
 import PauseOverlay from './components/PauseOverlay';
+import SettingsPanel from './components/SettingsPanel';
 import Toolbar from './components/Toolbar';
 import WinModal from './components/WinModal';
 import { useAnnouncer } from './hooks/useAnnouncer';
@@ -21,10 +23,13 @@ type Screen = 'landing' | 'game';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('landing');
-  const [layoutId] = useState<LayoutId>(() => {
+  const [layoutId, setLayoutId] = useState<LayoutId>(() => {
     if (typeof window === 'undefined') return 'classic-turtle';
     return loadSettings(window.localStorage).layoutId;
   });
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const { state, actions } = useGame(layoutId);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -139,6 +144,8 @@ export default function App() {
             onHint={actions.hint}
             onShuffle={actions.shuffle}
             onPause={actions.pause}
+            onHelp={() => setHelpOpen(true)}
+            onSettings={() => setSettingsOpen(true)}
             soundMuted={soundMuted}
             onToggleSound={toggleSound}
             theme={theme}
@@ -171,6 +178,23 @@ export default function App() {
         open={state.status === 'no-moves'}
         onRescue={actions.rescue}
         onNewGame={handleNewGame}
+      />
+
+      <Help open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        layoutId={layoutId}
+        onChangeLayout={(id) => {
+          setLayoutId(id);
+          if (typeof window !== 'undefined') {
+            const s = loadSettings(window.localStorage);
+            saveSettings(window.localStorage, { ...s, layoutId: id });
+          }
+        }}
+        reduceMotion={reduceMotion}
+        onChangeMotion={setReduceMotion}
       />
     </div>
   );

@@ -8,6 +8,8 @@ interface Props {
   onHint: () => void;
   onShuffle: () => void;
   onPause: () => void;
+  onHelp: () => void;
+  onSettings: () => void;
   soundMuted: boolean;
   onToggleSound: () => void;
   theme: string;
@@ -21,6 +23,8 @@ export default function Toolbar({
   onHint,
   onShuffle,
   onPause,
+  onHelp,
+  onSettings,
   soundMuted,
   onToggleSound,
   theme,
@@ -33,6 +37,8 @@ export default function Toolbar({
       <ToolBtn onClick={onHint} label={`Hint (${state.score.charms})`} disabled={!canHint(state)} />
       <ToolBtn onClick={onShuffle} label={`Shuffle (${state.score.charms})`} disabled={!canShuffle(state)} />
       <ToolBtn onClick={onPause} label="Pause" />
+      <ToolBtn onClick={onHelp} label="?" title="How to Play" />
+      <ToolBtn onClick={onSettings} label="⚙" title="Settings" />
       <ToolBtn onClick={onToggleSound} label={soundMuted ? '🔇' : '🔊'} title="Toggle sound" />
       <ToolBtn onClick={onToggleTheme} label={theme === 'dark' ? '🌙' : '☀️'} title="Toggle theme" />
     </div>
