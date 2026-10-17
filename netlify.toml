@@ -1,0 +1,8 @@
+# Netlify build configuration — a pure static SPA, no redirects or functions.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 7 requires Node ^20.19 || >=22.12; pin a satisfying major.
+  NODE_VERSION = "22"

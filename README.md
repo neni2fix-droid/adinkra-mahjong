@@ -51,6 +51,29 @@ the Web Audio API, and the PWA icons are SVG rather than PNG.
 
 ---
 
+## Deployment
+
+The build output (`dist/`) is a self-contained static bundle — host it anywhere
+that serves files over HTTP. No server, no functions, no environment variables,
+no database, and **no SPA rewrite rules** (the app has no URL router — screens are
+component state), so a plain static host is all that is required.
+
+- **Vercel** — import the repo. `vercel.json` pins the Vite preset
+  (`npm run build` → `dist`); everything else is auto-detected.
+- **Netlify** — import the repo. `netlify.toml` sets the build command, the
+  `dist` publish directory, and Node 22.
+- **Any other static host** — run `npm run build` and publish `dist/`.
+
+> **Node version.** Vite 7 needs Node `^20.19 || >=22.12`; `package.json#engines`
+> and `netlify.toml` pin a satisfying version for the hosts.
+>
+> **`.npmrc` note.** The committed `.npmrc` points npm's cache at a Windows path
+> (`C:/Users/...`) to work around a full `D:` drive locally. On a Linux build host
+> npm resolves that as a *relative* folder and the install still succeeds — but
+> for a clean build set `NPM_CONFIG_CACHE=/tmp/npm-cache` in the host's env.
+
+---
+
 ## Tech stack
 
 | Concern | Choice |
