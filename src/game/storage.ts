@@ -25,6 +25,20 @@ import type {
   StorageLike,
 } from './types';
 
+/**
+ * Resolve the host `localStorage`, or `null` when it is unavailable (SSR, or a
+ * browser that throws on access in private mode). Callers treat `null` as
+ * "persistence disabled" and fall back to in-memory behaviour.
+ */
+export function getBrowserStorage(): StorageLike | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 /** Namespaced, versioned storage keys. */
 export const STORAGE_KEYS = {
   game: `adinkra-mahjong:v${SCHEMA_VERSION}:game`,

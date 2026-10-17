@@ -7,9 +7,11 @@ A production-ready, browser-based **Mahjong Solitaire** game themed on the
 Adinkra symbols of Ghana. 34 curated symbols × 4 copies = **136 tiles**.
 Pure client-side SPA — no backend, no accounts, no network calls at runtime.
 
-> **Status: under construction.** T01 (infrastructure & build) and T02 (types &
-> data layer) are complete. The game core (T03) and the React UI (T04/T05)
-> land in subsequent tasks. See `docs/architecture.md` §14 for the task list.
+> **Status: playable.** The full game ships — the pure game core (rules, solvable
+> dealing, scoring, undo, persistence) and the React UI (board, toolbar, stats,
+> modals, Help & Settings) are complete and covered by the Vitest suite. See
+> `docs/architecture.md` §14 for the task list and `docs/game-design.md` for the
+> balance design.
 
 ---
 

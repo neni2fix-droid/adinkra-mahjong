@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearGame,
+  getBrowserStorage,
   loadCodex,
   loadGame,
   loadRecords,
@@ -9,6 +10,7 @@ import {
   saveGame,
   saveRecords,
   saveSettings,
+  STORAGE_KEYS,
 } from '../storage';
 import type { GameState, StorageLike } from '../types';
 
@@ -71,6 +73,7 @@ describe('storage', () => {
       hintKeys: null,
       seed: 1,
       codex: [],
+      stars: 0,
       lastEvent: null,
       eventSeq: 0,
     };
@@ -98,6 +101,7 @@ describe('storage', () => {
       hintKeys: null,
       seed: 1,
       codex: [],
+      stars: 0,
       lastEvent: null,
       eventSeq: 0,
     };
@@ -122,8 +126,21 @@ describe('storage', () => {
 
   it('ignores corrupt JSON gracefully', () => {
     const mem = memoryStorage();
-    mem.setItem('adinkra-mahjong:v2:settings', 'not-json');
+    mem.setItem(STORAGE_KEYS.settings, 'not-json');
     const s = loadSettings(mem);
     expect(s.theme).toBe('light');
+  });
+
+  it('discards a game stored under a stale schema version', () => {
+    const mem = memoryStorage();
+    mem.setItem(
+      'adinkra-mahjong:v2:game',
+      JSON.stringify({ version: 2, data: { status: 'playing' } }),
+    );
+    expect(loadGame(mem)).toBeNull();
+  });
+
+  it('getBrowserStorage returns localStorage in a DOM environment', () => {
+    expect(getBrowserStorage()).toBe(window.localStorage);
   });
 });

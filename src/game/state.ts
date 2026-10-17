@@ -83,6 +83,7 @@ export function createGame(
     hintKeys: null,
     seed,
     codex: [...codex].sort((a, b) => a - b),
+    stars: 0,
     lastEvent: { kind: 'new-game', layoutId: layout.id },
     eventSeq: 1,
   };
@@ -101,20 +102,6 @@ export function startNewGame(
   return {
     ...next,
     lastEvent: { kind: 'new-game', layoutId: layout.id },
-    eventSeq: state.eventSeq + 1,
-  };
-}
-
-/** Re-deal the *same* layout with a new seed. */
-export function restartGame(
-  state: GameState,
-  layout: LayoutDefinition,
-  seed: number,
-): GameState {
-  const next = createGame(layout, seed, state.codex);
-  return {
-    ...next,
-    lastEvent: { kind: 'restart', layoutId: layout.id },
     eventSeq: state.eventSeq + 1,
   };
 }
@@ -278,7 +265,7 @@ function commitMatch(
       maxCombo: next.score.maxCombo,
     });
     next = withEvent(
-      { ...next, status: 'won', score: { ...next.score, score: finalScoreValue } },
+      { ...next, status: 'won', stars, score: { ...next.score, score: finalScoreValue } },
       { kind: 'won', score: finalScoreValue, stars },
     );
   } else {

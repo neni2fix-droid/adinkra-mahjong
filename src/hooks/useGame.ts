@@ -13,11 +13,10 @@ import {
   resumeGame,
   startNewGame,
 } from '../game/state';
-import type { GameState, LayoutDefinition, LayoutId, TileKey } from '../game/types';
+import type { GameState, LayoutDefinition, LayoutId, SymbolId, TileKey } from '../game/types';
 
 type GameAction =
   | { type: 'new-game'; layoutId: LayoutId; seed?: number }
-  | { type: 'restart'; layoutId: LayoutId; seed?: number }
   | { type: 'select'; key: TileKey; now: number }
   | { type: 'undo' }
   | { type: 'hint' }
@@ -37,11 +36,7 @@ function reducer(state: GameState, action: GameAction): GameState {
     case 'new-game': {
       const layout = getLayout(action.layoutId);
       const seed = action.seed ?? Date.now();
-      return createGame(layout, seed);
-    }
-    case 'restart': {
-      const layout = getLayout(action.layoutId);
-      const seed = action.seed ?? Date.now();
+      // `startNewGame` (not `createGame`) so the permanent Codex is carried over.
       return startNewGame(state, layout, seed);
     }
     case 'select':
@@ -67,22 +62,30 @@ function reducer(state: GameState, action: GameAction): GameState {
   }
 }
 
-export function useGame(initialLayoutId: LayoutId = 'classic-turtle') {
+/** Seed data applied once, on the very first render. */
+export interface UseGameSeed {
+  /** A previously saved game to restore verbatim, if any. */
+  restored?: GameState | null;
+  /** Already-unlocked Codex ids to carry into a fresh deal. */
+  codex?: readonly SymbolId[];
+}
+
+export function useGame(
+  initialLayoutId: LayoutId = 'classic-turtle',
+  seedOptions: UseGameSeed = {},
+) {
   const [state, dispatch] = useReducer(
     reducer,
     undefined,
     () => {
+      if (seedOptions.restored) return seedOptions.restored;
       const layout = getLayout(initialLayoutId);
-      return createGame(layout, Date.now());
+      return createGame(layout, Date.now(), seedOptions.codex ?? []);
     },
   );
 
   const newGame = useCallback(
     (layoutId: LayoutId, seed?: number) => dispatch({ type: 'new-game', layoutId, seed }),
-    [],
-  );
-  const restart = useCallback(
-    (layoutId: LayoutId, seed?: number) => dispatch({ type: 'restart', layoutId, seed }),
     [],
   );
   const select = useCallback(
@@ -105,7 +108,6 @@ export function useGame(initialLayoutId: LayoutId = 'classic-turtle') {
     state,
     actions: {
       newGame,
-      restart,
       select,
       undo,
       hint,

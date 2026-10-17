@@ -101,11 +101,11 @@ class WebAudioSoundEngine implements SoundEngine {
               ];
 
     for (const step of sequence) {
-      this.tone(step, name);
+      this.tone(step);
     }
   }
 
-  private tone(step: Step, _name: SoundName): void {
+  private tone(step: Step): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const start = ctx.currentTime + step.at;

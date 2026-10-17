@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { isFlowAlive } from '../game/scoring';
 import type { GameState } from '../game/types';
 
 interface Props {
@@ -14,10 +14,9 @@ function formatTime(seconds: number): string {
 export default function GameStats({ state }: Props) {
   const { score, remaining, elapsedSeconds } = state;
 
-  const flowActive = useMemo(() => {
-    if (score.lastMatchAt === 0) return false;
-    return Date.now() - score.lastMatchAt <= 5000;
-  }, [score.lastMatchAt]);
+  // Recomputed every render (the timer re-renders this component once a second
+  // while playing), so the Flow indicator lapses exactly when the window does.
+  const flowActive = isFlowAlive(score, Date.now());
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm">
