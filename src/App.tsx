@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LAYOUT_BY_ID } from './data/layouts';
-import { loadSettings, saveSettings } from './game/storage';
+import { getBrowserStorage, loadGame, loadSettings, saveSettings } from './game/storage';
 import type { GameEvent, LayoutId } from './game/types';
 import Footer from './components/Footer';
 import GameBoard from './components/GameBoard';
@@ -14,7 +14,7 @@ import SettingsPanel from './components/SettingsPanel';
 import Toolbar from './components/Toolbar';
 import WinModal from './components/WinModal';
 import { useAnnouncer } from './hooks/useAnnouncer';
-import { useGame } from './hooks/useGame';
+import { usePersistentGame } from './hooks/usePersistentGame';
 import { useSound } from './hooks/useSound';
 import { useTheme } from './hooks/useTheme';
 import { useTimer } from './hooks/useTimer';
@@ -22,16 +22,24 @@ import { useTimer } from './hooks/useTimer';
 type Screen = 'landing' | 'game';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('landing');
+  // A returning player with a saved game resumes straight into it; a first-time
+  // visitor sees the landing screen (architecture §9.1).
+  const [screen, setScreen] = useState<Screen>(() => {
+    const storage = getBrowserStorage();
+    return storage && loadGame(storage) ? 'game' : 'landing';
+  });
   const [layoutId, setLayoutId] = useState<LayoutId>(() => {
-    if (typeof window === 'undefined') return 'classic-turtle';
-    return loadSettings(window.localStorage).layoutId;
+    const storage = getBrowserStorage();
+    if (!storage) return 'classic-turtle';
+    // A restored game's layout wins over the settings default, so the board and
+    // the tiles on screen always agree on the first paint.
+    return loadGame(storage)?.layoutId ?? loadSettings(storage).layoutId;
   });
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  const { state, actions } = useGame(layoutId);
+  const { state, actions } = usePersistentGame(layoutId);
   const { theme, toggle: toggleTheme } = useTheme();
   const { muted: soundMuted, init: initSound, play, toggle: toggleSound } = useSound();
   const { polite, assertive, announce } = useAnnouncer();
@@ -116,7 +124,9 @@ export default function App() {
     [actions, handleInteraction],
   );
 
-  const layout = LAYOUT_BY_ID[layoutId] ?? LAYOUT_BY_ID['classic-turtle'];
+  // Render from the *state's* layout, so a restored or newly-dealt game can
+  // never be drawn against a mismatched grid.
+  const layout = LAYOUT_BY_ID[state.layoutId] ?? LAYOUT_BY_ID['classic-turtle'];
 
   if (screen === 'landing') {
     return (
@@ -170,7 +180,7 @@ export default function App() {
         open={state.status === 'won'}
         score={state.score.score}
         timeSeconds={state.elapsedSeconds}
-        stars={0}
+        stars={state.stars}
         onPlayAgain={handleNewGame}
       />
 
@@ -188,10 +198,13 @@ export default function App() {
         layoutId={layoutId}
         onChangeLayout={(id) => {
           setLayoutId(id);
-          if (typeof window !== 'undefined') {
-            const s = loadSettings(window.localStorage);
-            saveSettings(window.localStorage, { ...s, layoutId: id });
+          const storage = getBrowserStorage();
+          if (storage) {
+            saveSettings(storage, { ...loadSettings(storage), layoutId: id });
           }
+          // Re-deal on the new grid so the board and the tiles always agree.
+          actions.newGame(id);
+          resetTimer();
         }}
         reduceMotion={reduceMotion}
         onChangeMotion={setReduceMotion}

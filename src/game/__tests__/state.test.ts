@@ -11,6 +11,7 @@ import {
   canUndo,
   createGame,
   evaluateStatus,
+  startNewGame,
 } from '../state';
 
 describe('state', () => {
@@ -90,5 +91,33 @@ describe('state', () => {
     const before = state.remaining;
     state = applyShuffle(state);
     expect(state.remaining).toBe(before);
+  });
+
+  it('a fresh game starts with a zero star rating', () => {
+    expect(createGame(layout, 9).stars).toBe(0);
+  });
+
+  it('startNewGame preserves the permanent Codex', () => {
+    const first = createGame(layout, 10, [1, 2, 3]);
+    const next = startNewGame(first, layout, 11);
+    expect(next.codex).toEqual([1, 2, 3]);
+    expect(next.remaining).toBe(136);
+  });
+
+  it('clearing the board sets status won and awards stars', () => {
+    let state = createGame(layout, 42);
+    let now = 1_000_000;
+    let guard = 0;
+    while (state.status === 'playing' && guard++ < 200) {
+      const match = findMatch(state.tiles, maxLayerOf(state.tiles));
+      if (!match) break;
+      state = applySelect(state, match[0], now);
+      state = applySelect(state, match[1], now + 50);
+      now += 1000; // stay inside the 5 s Flow window, so the chain never breaks
+    }
+    expect(state.status).toBe('won');
+    expect(state.remaining).toBe(0);
+    // No hints, no shuffles, and a held Flow chain ⇒ the perfect-play rating.
+    expect(state.stars).toBe(3);
   });
 });

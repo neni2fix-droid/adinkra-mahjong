@@ -151,7 +151,6 @@ export type GameEvent =
   | { kind: 'won'; score: number; stars: StarRating }
   | { kind: 'no-moves' }
   | { kind: 'new-game'; layoutId: LayoutId }
-  | { kind: 'restart'; layoutId: LayoutId }
   | { kind: 'paused' }
   | { kind: 'resumed' }
   | { kind: 'ignored' };
@@ -170,6 +169,8 @@ export interface GameState {
   seed: number; // deal seed (determinism / restore / future daily challenge)
   /** Unlocked Codex symbol ids, ascending (design doc §4.5). */
   codex: SymbolId[];
+  /** Mastery rating for the finished run; 0 until the board is cleared. */
+  stars: StarRating;
   /** The most recent event, plus a monotonic sequence number for the UI. */
   lastEvent: GameEvent | null;
   eventSeq: number;
@@ -241,8 +242,13 @@ export type SelectResult =
  * TUNING CONSTANTS — single source of truth (design doc §12)
  * ═══════════════════════════════════════════════════════════════════════ */
 
-/** Bumped whenever `GameState` changes shape; drives storage migration. */
-export const SCHEMA_VERSION = 2;
+/**
+ * Bumped whenever `GameState` changes shape; drives storage migration.
+ *
+ * v3 adds `GameState.stars` (the mastery rating, surfaced by the win modal and
+ * the record book).
+ */
+export const SCHEMA_VERSION = 3;
 
 export const TILES_PER_SYMBOL = 4;
 export const SYMBOL_COUNT = 34;
